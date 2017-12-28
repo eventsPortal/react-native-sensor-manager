@@ -19,6 +19,11 @@ import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.facebook.react.bridge.ReactApplicationContext;
 
 public class OrientationRecord implements SensorEventListener {
+    private final int ORIENTATION_PORTRAIT = 6;
+    private final int ORIENTATION_LANDSCAPE_REVERSE = 3;
+    private final int ORIENTATION_LANDSCAPE = 1;
+    private final int ORIENTATION_PORTRAIT_REVERSE = 8;
+    int smoothness = 1;
 
     private SensorManager mSensorManager;
     private Sensor mAccelerometer;
@@ -30,7 +35,7 @@ public class OrientationRecord implements SensorEventListener {
 
     private ReactContext mReactContext;
     private Arguments mArguments;
-
+    private int orientation = ORIENTATION_PORTRAIT;
 
     public OrientationRecord(ReactApplicationContext reactContext) {
         mSensorManager = (SensorManager)reactContext.getSystemService(reactContext.SENSOR_SERVICE);
@@ -86,36 +91,61 @@ public class OrientationRecord implements SensorEventListener {
         boolean success = mSensorManager.getRotationMatrix(R, I, mGravity, mGeomagnetic);
         if (success) {
           long curTime = System.currentTimeMillis();
-          float orientation[] = new float[3];
-          mSensorManager.getOrientation(R, orientation);
+          float orientationData[] = new float[3];
+          mSensorManager.getOrientation(R, orientationData);
 
-          float heading = (float)((Math.toDegrees(orientation[0])) % 360.0f);
-          float pitch = (float)((Math.toDegrees(orientation[1])) % 360.0f);
-          float roll = (float)((Math.toDegrees(orientation[2])) % 360.0f);
+          float heading = (float)((Math.toDegrees(orientationData[0])) % 360.0f);
+          float pitch = (float)((Math.toDegrees(orientationData[1])) % 360.0f);
+          float roll = (float)((Math.toDegrees(orientationData[2])) % 360.0f);
 
-          if (heading < 0) {
-            heading = 360 - (0 - heading);
-          }
-
-          if (pitch < 0) {
-            pitch = 360 - (0 - pitch);
-          }
-
-          if (roll < 0) {
-            roll = 360 - (0 - roll);
-          }
+          String returned  = calculateOrientation(pitch, roll);
 
           i++;
           if ((curTime - lastUpdate) > delay) {
-              i = 0;
-          map.putDouble("azimuth", heading);
-          map.putDouble("pitch", pitch);
-          map.putDouble("roll", roll);
-          sendEvent("Orientation", map);
-          lastUpdate = curTime;
+            i = 0;
+            map.putString("orientation", returned);
+            sendEvent("Orientation", map);
+            lastUpdate = curTime;
           }
         }
       }
+    }
+
+     private String calculateOrientation(float averagePitch, float averageRoll) {
+        // finding local orientation dip
+        if (((orientation == ORIENTATION_PORTRAIT || orientation == ORIENTATION_PORTRAIT_REVERSE)
+                && (averageRoll > -30 && averageRoll < 30))) {
+            if (averagePitch > 0)
+                return "PORTRAIT_REVERSE";
+            else
+                return "PORTRAIT";
+        } else {
+            // divides between all orientations
+            if (Math.abs(averagePitch) >= 30) {
+                if (averagePitch > 0)
+                    return "PORTRAIT_REVERSE";
+                else
+                    return "PORTRAIT";
+            } else {
+                if (averageRoll > 0) {
+                  return "LANDSCAPE_RIGHT";
+                } else {
+                    return "LANDSCAPE";
+                }
+            }
+        }
+    }
+
+    private float addValue(float value, float[] values) {
+        value = (float) Math.round((Math.toDegrees(value)));
+        float average = 0;
+        for (int i = 1; i < smoothness; i++) {
+            values[i - 1] = values[i];
+            average += values[i];
+        }
+        values[smoothness - 1] = value;
+        average = (average + value) / smoothness;
+        return average;
     }
 
     @Override
