@@ -93,7 +93,6 @@ public class OrientationRecord implements SensorEventListener {
           float pitch = (float)((Math.toDegrees(orientationData[1])) % 360.0f);
           float roll = (float)((Math.toDegrees(orientationData[2])) % 360.0f);
 
-          
           currentOrientation = calculateOrientation(pitch, roll);
 
           i++;
@@ -107,30 +106,34 @@ public class OrientationRecord implements SensorEventListener {
     }
 
      private String calculateOrientation(float averagePitch, float averageRoll) {
-        if (
-          (currentOrientation == "PORTRAIT" || currentOrientation == "PORTRAIT_REVERSE")
-          && (averageRoll > -30 && averageRoll < 30)
-        ) {
-            if (averagePitch > 10)
-                return "PORTRAIT_REVERSE";
-            else
-                return "PORTRAIT";
-        } else {
-            if (Math.abs(averagePitch) >= 30) {
-                if (averagePitch > 10)
-                    return "PORTRAIT_REVERSE";
-                else
-                    return "PORTRAIT";
-            } else {
-                if (averageRoll > 5) {
-                  return "LANDSCAPE_LEFT";
-                } 
-                if (averageRoll < -5) {
-                  return "LANDSCAPE_RIGHT";
-                }
-            }
+      if (
+        (currentOrientation == "PORTRAIT" || currentOrientation == "PORTRAIT_REVERSE")
+        && (averageRoll > -50 && averageRoll < 50)
+      ) {
+        if (averagePitch > 10) {
+          return "PORTRAIT_REVERSE";
         }
-        return currentOrientation;
+        else {
+          return "PORTRAIT";
+        }
+      } else {
+        if (Math.abs(averagePitch) >= 30) {
+          if (averagePitch > 10) {
+            return "PORTRAIT_REVERSE";
+          }
+          else {
+            return "PORTRAIT";
+          }
+        } else {
+          if (averageRoll > 30) {
+            return "LANDSCAPE_LEFT";
+          } 
+          if (averageRoll < -30) {
+            return "LANDSCAPE_RIGHT";
+          }
+        }
+      }
+      return currentOrientation;
     }
 
     private float addValue(float value, float[] values) {
